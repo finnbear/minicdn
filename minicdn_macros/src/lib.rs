@@ -3,7 +3,8 @@
 use litrs::StringLit;
 use minicdn_core::{EmbeddedMiniCdn, MiniCdnFile};
 use proc_macro::TokenStream;
-use quote::quote;
+use proc_macro2::{Literal, TokenTree};
+use quote::{quote, ToTokens, TokenStreamExt};
 use std::borrow::Cow;
 use std::path::Path;
 
@@ -111,21 +112,28 @@ fn arg_to_path(arg: &str) -> String {
     root_path.to_str().unwrap().to_string()
 }
 
+#[derive(Debug)]
+struct ByteStr<'a>(pub &'a [u8]);
+
+impl<'a> ToTokens for ByteStr<'a> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.append(TokenTree::Literal(Literal::byte_string(self.0)));
+    }
+}
+
 fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
+    let bytes = ByteStr(data.as_ref());
     quote! {
-        std::borrow::Cow::Borrowed(&[
-            #(#data,)*
-        ])
+        std::borrow::Cow::Borrowed(#bytes)
     }
     .into()
 }
 
 fn quote_option_cow(opt: &Option<Cow<'static, [u8]>>) -> proc_macro2::TokenStream {
     if let Some(data) = opt {
+        let cow = quote_cow(data);
         quote! {
-            Some(std::borrow::Cow::Borrowed(&[
-                #(#data,)*
-            ]))
+            Some(#cow)
         }
     } else {
         quote! {

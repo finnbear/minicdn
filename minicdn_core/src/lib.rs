@@ -270,13 +270,14 @@ fn last_modified(absolute_path: &str) -> String {
 fn etag(contents: &[u8]) -> String {
     let mut etag = sha256::digest_bytes(contents);
     etag.truncate(32);
+    //etag.shrink_to_fit();
     etag
 }
 
 fn brotli(contents: &[u8]) -> Option<Vec<u8>> {
     use std::io::Write;
     let mut output = Vec::new();
-    let mut writer = brotli::CompressorWriter::new(&mut output, 4096, 9, 22);
+    let mut writer = brotli::CompressorWriter::new(&mut output, 4096, 9, 20);
     writer.write_all(contents).unwrap();
     drop(writer);
     if output.len() * 10 / 9 < contents.len() {
