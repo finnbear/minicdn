@@ -1,7 +1,6 @@
 use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::SystemTime;
 
 #[cfg(feature = "serde_base64")]
 mod base64;
@@ -47,19 +46,25 @@ type ByteBuf = base64::ByteBuf;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MiniCdnFile {
-    /// MIME type.
-    pub mime: Cow<'static, str>,
     /// For ETAG-based caching.
+    #[cfg(feature = "etag")]
     pub etag: Cow<'static, str>,
     /// For last modified caching.
+    #[cfg(feature = "last_modified")]
     pub last_modified: Cow<'static, str>,
+    /// MIME type.
+    #[cfg(feature = "mime")]
+    pub mime: Cow<'static, str>,
     /// Raw bytes of file.
     pub contents: Cow<'static, Bytes>,
     /// Contents compressed as Brotli.
+    #[cfg(feature = "gzip")]
     pub contents_brotli: Option<Cow<'static, Bytes>>,
     /// Contents compressed as GZIP.
+    #[cfg(feature = "brotli")]
     pub contents_gzip: Option<Cow<'static, Bytes>>,
     /// Contents compressed as WebP (only applies to images).
+    #[cfg(feature = "webp")]
     pub contents_webp: Option<Cow<'static, Bytes>>,
 }
 
@@ -77,28 +82,46 @@ impl EmbeddedMiniCdn {
     pub fn new_compressed(root_path: &str) -> Self {
         let mut ret = Self::default();
         get_paths(root_path).for_each(|(absolute_path, relative_path)| {
+            #[cfg(feature = "last_modified")]
             let last_modified = last_modified(&absolute_path);
             let contents = std::fs::read(&absolute_path).expect(&relative_path);
 
+            #[cfg(feature = "mime")]
             let mime_essence = mime(&relative_path);
+            #[cfg(feature = "etag")]
             let etag = etag(&contents);
+            #[cfg(feature = "webp")]
             let contents_webp = webp(&contents, &mime_essence);
-            let (contents_brotli, contents_gzip) = if contents_webp.is_none() {
-                (brotli(&contents), gzip(&contents))
-            } else {
-                // Don't apply generic compression to images.
-                (None, None)
-            };
+
+            #[cfg(not(feature = "webp"))]
+            #[allow(unused)]
+            let special = false;
+
+            #[cfg(feature = "webp")]
+            #[allow(unused)]
+            let special = contents_webp.is_some();
+
+            #[cfg(feature = "gzip")]
+            let contents_gzip = if special { None } else { gzip(&contents) };
+
+            #[cfg(feature = "brotli")]
+            let contents_brotli = if special { None } else { brotli(&contents) };
 
             ret.insert(
                 Cow::Owned(relative_path),
                 MiniCdnFile {
-                    mime: Cow::Owned(mime_essence),
+                    #[cfg(feature = "etag")]
                     etag: Cow::Owned(etag),
+                    #[cfg(feature = "last_modified")]
                     last_modified: Cow::Owned(last_modified),
+                    #[cfg(feature = "mime")]
+                    mime: Cow::Owned(mime_essence),
                     contents: Cow::Owned(into_byte_buf(contents)),
+                    #[cfg(feature = "brotli")]
                     contents_brotli: contents_brotli.map(into_byte_buf).map(Cow::Owned),
+                    #[cfg(feature = "gzip")]
                     contents_gzip: contents_gzip.map(into_byte_buf).map(Cow::Owned),
+                    #[cfg(feature = "webp")]
                     contents_webp: contents_webp.map(into_byte_buf).map(Cow::Owned),
                 },
             )
@@ -148,12 +171,18 @@ impl FilesystemMiniCdn {
         }
         let contents = std::fs::read(&canonical_path).ok()?;
         Some(MiniCdnFile {
+            #[cfg(feature = "mime")]
             mime: Cow::Owned(mime(canonical_path)),
+            #[cfg(feature = "etag")]
             etag: Cow::Owned(etag(&contents)),
+            #[cfg(feature = "last_modified")]
             last_modified: Cow::Owned(last_modified(canonical_path)),
             contents: Cow::Owned(into_byte_buf(contents)),
+            #[cfg(feature = "brotli")]
             contents_brotli: None,
+            #[cfg(feature = "gzip")]
             contents_gzip: None,
+            #[cfg(feature = "webp")]
             contents_webp: None,
         })
     }
@@ -271,13 +300,16 @@ fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
         })
 }
 
+#[cfg(feature = "mime")]
 fn mime(path: &str) -> String {
     mime_guess::from_path(&path)
         .first_or_octet_stream()
         .to_string()
 }
 
+#[cfg(feature = "last_modified")]
 fn last_modified(absolute_path: &str) -> String {
+    use std::time::SystemTime;
     std::fs::metadata(absolute_path)
         .expect(&format!("could not get metadata for {}", absolute_path))
         .modified()
@@ -297,6 +329,7 @@ fn last_modified(absolute_path: &str) -> String {
         .to_string()
 }
 
+#[cfg(feature = "etag")]
 fn etag(contents: &[u8]) -> String {
     let mut etag = sha256::digest_bytes(contents);
     etag.truncate(32);
@@ -304,6 +337,7 @@ fn etag(contents: &[u8]) -> String {
     etag
 }
 
+#[cfg(feature = "brotli")]
 fn brotli(contents: &[u8]) -> Option<Vec<u8>> {
     use std::io::Write;
     let mut output = Vec::new();
@@ -318,6 +352,7 @@ fn brotli(contents: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+#[cfg(feature = "gzip")]
 fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
     use flate2::write::GzEncoder;
     use flate2::Compression;
@@ -333,6 +368,7 @@ fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+#[cfg(feature = "webp")]
 fn webp(contents: &[u8], mime_essence: &str) -> Option<Vec<u8>> {
     use std::io::Cursor;
     let cursor = Cursor::new(contents.as_ref());

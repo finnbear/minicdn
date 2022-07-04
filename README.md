@@ -35,6 +35,8 @@ let _ = image.contents;
 let _ = image.contents_webp;
 ```
 
+All of the fields (excepts `contents`) are disabled by default, but can be switched on by a corresponding feature flag.
+
 Check the documentation for other options, such as doing the compression at runtime.
 
 ## License

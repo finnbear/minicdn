@@ -13,16 +13,7 @@ pub fn main() {
 
 fn dump_mini_cdn(mini_cdn: MiniCdn) {
     mini_cdn.for_each(|path, file| {
-        println!("{:?}: mime={:?} etag={:?} last_modified={:?} contents={:?} brotli={:?} gzip={:?} webp={:?}",
-                 path,
-                 file.mime.clone(),
-                 file.etag.clone(),
-                 file.last_modified.clone(),
-                 file.contents.len(),
-                 file.contents_brotli.as_ref().map(|b| b.len()),
-                 file.contents_gzip.as_ref().map(|b| b.len()),
-                 file.contents_webp.as_ref().map(|b| b.len())
-        );
+        println!("{:?}: {:?}", path, file);
     });
 
     #[cfg(feature = "serde")]

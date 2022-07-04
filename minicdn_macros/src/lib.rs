@@ -1,7 +1,7 @@
 #![feature(proc_macro_span)]
 
 use litrs::StringLit;
-use minicdn_core::{EmbeddedMiniCdn, MiniCdnFile};
+use minicdn_core::EmbeddedMiniCdn;
 use proc_macro::TokenStream;
 use proc_macro2::{Literal, TokenTree};
 use quote::{quote, ToTokens, TokenStreamExt};
@@ -47,40 +47,71 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
-    EmbeddedMiniCdn::new_compressed(&root_path).iter().for_each(
-        |(
-            path,
-            MiniCdnFile {
-                mime,
-                etag,
-                last_modified,
-                contents,
-                contents_brotli,
-                contents_gzip,
-                contents_webp,
-            },
-        )| {
-            let contents = quote_cow(contents);
-            let contents_brotli = quote_option_cow(contents_brotli);
-            let contents_gzip = quote_option_cow(contents_gzip);
-            let contents_webp = quote_option_cow(contents_webp);
+    EmbeddedMiniCdn::new_compressed(&root_path)
+        .iter()
+        .for_each(|(path, file)| {
+            let contents = quote_cow(&file.contents);
+            #[allow(unused_mut)]
+            let mut fields = Vec::<proc_macro2::TokenStream>::new();
+
+            #[cfg(feature = "etag")]
+            {
+                let etag = &file.etag;
+                fields.push(quote! {
+                    etag: std::borrow::Cow::Borrowed(#etag)
+                });
+            }
+
+            #[cfg(feature = "last_modified")]
+            {
+                let last_modified = &file.last_modified;
+                fields.push(quote! {
+                    last_modified: std::borrow::Cow::Borrowed(#last_modified)
+                });
+            }
+
+            #[cfg(feature = "mime")]
+            {
+                let mime = &file.mime;
+                fields.push(quote! {
+                    mime: std::borrow::Cow::Borrowed(#mime)
+                });
+            }
+
+            #[cfg(feature = "brotli")]
+            {
+                let contents_brotli = quote_option_cow(&file.contents_brotli);
+                fields.push(quote! {
+                    contents_brotli: #contents_brotli
+                });
+            }
+
+            #[cfg(feature = "gzip")]
+            {
+                let contents_gzip = quote_option_cow(&file.contents_gzip);
+                fields.push(quote! {
+                    contents_gzip: #contents_gzip
+                });
+            }
+
+            #[cfg(feature = "webp")]
+            {
+                let contents_webp = quote_option_cow(&file.contents_webp);
+                fields.push(quote! {
+                    contents_webp: #contents_webp
+                });
+            }
 
             files.push(
                 quote! {
                     ret.insert(std::borrow::Cow::Borrowed(#path), minicdn::MiniCdnFile{
-                        mime: std::borrow::Cow::Borrowed(#mime),
-                        etag: std::borrow::Cow::Borrowed(#etag),
-                        last_modified: std::borrow::Cow::Borrowed(#last_modified),
                         contents: #contents,
-                        contents_brotli: #contents_brotli,
-                        contents_gzip: #contents_gzip,
-                        contents_webp: #contents_webp,
+                        #(#fields,)*
                     });
                 }
                 .into(),
             );
-        },
-    );
+        });
 
     quote! {
         {
@@ -121,6 +152,7 @@ impl<'a> ToTokens for ByteStr<'a> {
     }
 }
 
+#[allow(unused)]
 fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
     let bytes = ByteStr(data.as_ref());
     quote! {
@@ -129,6 +161,7 @@ fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
     .into()
 }
 
+#[allow(unused)]
 fn quote_option_cow(opt: &Option<Cow<'static, [u8]>>) -> proc_macro2::TokenStream {
     if let Some(data) = opt {
         let cow = quote_cow(data);
