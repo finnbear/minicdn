@@ -1,0 +1,17 @@
+[package]
+name = "minicdn_core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/finnbear/minicdn/"
+description = "Static files, compressed for efficiency (core crate)."
+
+[dependencies]
+mime_guess = "2.0"
+sha256 = "1.0"
+walkdir = "2.3"
+webp = "0.2"
+flate2 = "1"
+brotli = "3.3"
+image = "0.24"
+serde = {version = "1.0", features = ["derive"], optional = true}
