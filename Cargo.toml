@@ -11,7 +11,7 @@ description = "Static files, compressed for efficiency."
 serde = ["minicdn_core/serde"]
 
 [dependencies]
-minicdn_core = {version = "0.1.1", path = "./minicdn_core"}
+minicdn_core = {version = "0.1.2", path = "./minicdn_core"}
 minicdn_macros = {version = "0.1.3", path = "./minicdn_macros"}
 
 [dev-dependencies]
