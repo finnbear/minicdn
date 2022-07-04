@@ -94,8 +94,8 @@ impl EmbeddedMiniCdn {
     }
 
     /// Gets a previously embedded or inserted file.
-    pub fn get(&self, path: &str) -> Option<Cow<'_, MiniCdnFile>> {
-        self.files.get(path).map(|f| Cow::Borrowed(f))
+    pub fn get(&self, path: &str) -> Option<&MiniCdnFile> {
+        self.files.get(path)
     }
 
     /// Inserts a file.
@@ -176,7 +176,7 @@ impl MiniCdn {
     /// Get a file by path.
     pub fn get(&self, path: &str) -> Option<Cow<'_, MiniCdnFile>> {
         match self {
-            Self::Embedded(embedded) => embedded.get(path),
+            Self::Embedded(embedded) => embedded.get(path).map(Cow::Borrowed),
             Self::Filesystem(filesystem) => filesystem.get(path).map(Cow::Owned),
         }
     }
