@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::SystemTime;
 
+#[cfg(feature = "serde_base64")]
+mod base64;
+
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -31,6 +34,16 @@ impl Default for MiniCdn {
     }
 }
 
+#[cfg(not(feature = "serde_base64"))]
+type Bytes = [u8];
+#[cfg(feature = "serde_base64")]
+type Bytes = base64::Bytes;
+
+#[cfg(not(feature = "serde_base64"))]
+type ByteBuf = Vec<u8>;
+#[cfg(feature = "serde_base64")]
+type ByteBuf = base64::ByteBuf;
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MiniCdnFile {
@@ -41,13 +54,13 @@ pub struct MiniCdnFile {
     /// For last modified caching.
     pub last_modified: Cow<'static, str>,
     /// Raw bytes of file.
-    pub contents: Cow<'static, [u8]>,
+    pub contents: Cow<'static, Bytes>,
     /// Contents compressed as Brotli.
-    pub contents_brotli: Option<Cow<'static, [u8]>>,
+    pub contents_brotli: Option<Cow<'static, Bytes>>,
     /// Contents compressed as GZIP.
-    pub contents_gzip: Option<Cow<'static, [u8]>>,
+    pub contents_gzip: Option<Cow<'static, Bytes>>,
     /// Contents compressed as WebP (only applies to images).
-    pub contents_webp: Option<Cow<'static, [u8]>>,
+    pub contents_webp: Option<Cow<'static, Bytes>>,
 }
 
 impl EmbeddedMiniCdn {
@@ -83,10 +96,10 @@ impl EmbeddedMiniCdn {
                     mime: Cow::Owned(mime_essence),
                     etag: Cow::Owned(etag),
                     last_modified: Cow::Owned(last_modified),
-                    contents: Cow::Owned(contents),
-                    contents_brotli: contents_brotli.map(Cow::Owned),
-                    contents_gzip: contents_gzip.map(Cow::Owned),
-                    contents_webp: contents_webp.map(Cow::Owned),
+                    contents: Cow::Owned(into_byte_buf(contents)),
+                    contents_brotli: contents_brotli.map(into_byte_buf).map(Cow::Owned),
+                    contents_gzip: contents_gzip.map(into_byte_buf).map(Cow::Owned),
+                    contents_webp: contents_webp.map(into_byte_buf).map(Cow::Owned),
                 },
             )
         });
@@ -138,7 +151,7 @@ impl FilesystemMiniCdn {
             mime: Cow::Owned(mime(canonical_path)),
             etag: Cow::Owned(etag(&contents)),
             last_modified: Cow::Owned(last_modified(canonical_path)),
-            contents: Cow::Owned(contents),
+            contents: Cow::Owned(into_byte_buf(contents)),
             contents_brotli: None,
             contents_gzip: None,
             contents_webp: None,
@@ -211,6 +224,23 @@ impl From<&FilesystemMiniCdn> for EmbeddedMiniCdn {
         }
         ret
     }
+}
+
+/// Nothing to see here, move along now!
+pub fn into_bytes<'a>(bytes: &'a [u8]) -> &'a Bytes {
+    #[cfg(feature = "serde_base64")]
+    return bytes.into();
+
+    #[cfg(not(feature = "serde_base64"))]
+    bytes
+}
+
+fn into_byte_buf(vec: Vec<u8>) -> ByteBuf {
+    #[cfg(feature = "serde_base64")]
+    return ByteBuf::from(vec);
+
+    #[cfg(not(feature = "serde_base64"))]
+    vec
 }
 
 fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {

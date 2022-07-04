@@ -1,3 +1,5 @@
+#[doc(hidden)]
+pub use minicdn_core::into_bytes;
 pub use minicdn_core::{EmbeddedMiniCdn, FilesystemMiniCdn, MiniCdn, MiniCdnFile};
 pub use minicdn_macros::{include_mini_cdn, release_include_mini_cdn};
 

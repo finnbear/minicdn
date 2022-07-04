@@ -124,7 +124,7 @@ impl<'a> ToTokens for ByteStr<'a> {
 fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
     let bytes = ByteStr(data.as_ref());
     quote! {
-        std::borrow::Cow::Borrowed(#bytes)
+        std::borrow::Cow::Borrowed(minicdn::into_bytes(#bytes))
     }
     .into()
 }

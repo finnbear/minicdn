@@ -9,6 +9,7 @@ description = "Static files, compressed for efficiency."
 
 [features]
 serde = ["minicdn_core/serde"]
+serde_base64 = ["minicdn_core/serde_base64"]
 
 [dependencies]
 minicdn_core = {version = "0.1.5", path = "./minicdn_core"}

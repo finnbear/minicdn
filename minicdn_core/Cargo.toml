@@ -6,6 +6,9 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
 description = "Static files, compressed for efficiency (core crate)."
 
+[features]
+serde_base64 = ["serde", "base64", "ref-cast"]
+
 [dependencies]
 mime_guess = "2.0"
 sha256 = "1.0"
@@ -15,3 +18,5 @@ flate2 = "1"
 brotli = "3.3"
 image = {version = "0.24", features = ["png", "jpeg"], default-features = false}
 serde = {version = "1.0", features = ["derive"], optional = true}
+base64 = {version = "0.13", optional = true}
+ref-cast = {version = "1.0.7", optional = true}
