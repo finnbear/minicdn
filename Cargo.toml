@@ -12,7 +12,7 @@ serde = ["minicdn_core/serde"]
 
 [dependencies]
 minicdn_core = {version = "0.1.0", path = "./minicdn_core"}
-minicdn_macros = {version = "0.1.0", path = "./minicdn_macros"}
+minicdn_macros = {version = "0.1.1", path = "./minicdn_macros"}
 
 [dev-dependencies]
 serde_json = "1.0"
