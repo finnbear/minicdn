@@ -30,7 +30,7 @@ pub fn release_include_mini_cdn(args: TokenStream) -> TokenStream {
 
             #[cfg(not(debug_assertions))]
             {
-                MiniCdn::Embedded(minicdn::include_mini_cdn!(#arg))
+                minicdn::MiniCdn::Embedded(minicdn::include_mini_cdn!(#arg))
             }
         }
     }
