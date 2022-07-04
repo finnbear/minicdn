@@ -83,7 +83,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     quote! {
         {
-            let mut ret = minicdn_core::EmbeddedMiniCdn::default();
+            let mut ret = minicdn::EmbeddedMiniCdn::default();
             #(#files)*
             ret
         }
