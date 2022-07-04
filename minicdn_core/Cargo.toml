@@ -13,5 +13,5 @@ walkdir = "2.3"
 webp = "0.2"
 flate2 = "1"
 brotli = "3.3"
-image = "0.24"
+image = {version = "0.24", features = ["png", "jpeg"], default-features = false}
 serde = {version = "1.0", features = ["derive"], optional = true}
