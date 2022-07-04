@@ -6,7 +6,7 @@ use std::path::Path;
 pub mod base64;
 
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MiniCdn {
     Embedded(EmbeddedMiniCdn),
@@ -14,14 +14,14 @@ pub enum MiniCdn {
 }
 
 /// A collection of files loaded from the compiled binary.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EmbeddedMiniCdn {
     files: HashMap<Cow<'static, str>, MiniCdnFile>,
 }
 
 /// A collection of files loaded from the filesystem at runtime.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FilesystemMiniCdn {
     root_path: Cow<'static, str>,
