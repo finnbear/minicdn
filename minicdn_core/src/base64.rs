@@ -1,11 +1,18 @@
 use ref_cast::RefCast;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, PartialEq, Eq, RefCast)]
 #[repr(transparent)]
 pub struct Bytes([u8]);
+
+impl<'a> From<&'a Bytes> for &'a [u8] {
+    fn from(val: &'a Bytes) -> Self {
+        // SAFETY: Same memory layout, as checked by [`RefCast`] in the other direction.
+        unsafe { &*(val as *const Bytes as *const [u8]) }
+    }
+}
 
 impl<'a> From<&'a [u8]> for &'a Bytes {
     fn from(val: &'a [u8]) -> Self {
@@ -118,5 +125,12 @@ impl<'de> Deserialize<'de> for ByteBuf {
         } else {
             <Vec<u8>>::deserialize(deserializer).map(ByteBuf::from)
         }
+    }
+}
+
+pub fn convert_serde_base64_cow(cow: Cow<'_, Bytes>) -> Cow<'_, [u8]> {
+    match cow {
+        Cow::Borrowed(bytes) => Cow::Borrowed(bytes.into()),
+        Cow::Owned(byte_buf) => Cow::Owned(byte_buf.into()),
     }
 }

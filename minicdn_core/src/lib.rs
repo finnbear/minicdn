@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 #[cfg(feature = "serde_base64")]
-mod base64;
+pub mod base64;
 
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
 #[derive(Clone)]
