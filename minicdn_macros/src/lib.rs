@@ -158,7 +158,7 @@ impl<'a> ToTokens for ByteStr<'a> {
 }
 
 #[allow(unused)]
-fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
+fn quote_cow(data: &Cow<'static, minicdn_core::Bytes>) -> proc_macro2::TokenStream {
     let bytes = ByteStr(data.as_ref());
     quote! {
         std::borrow::Cow::Borrowed(minicdn::into_bytes(#bytes))
@@ -167,7 +167,7 @@ fn quote_cow(data: &Cow<'static, [u8]>) -> proc_macro2::TokenStream {
 }
 
 #[allow(unused)]
-fn quote_option_cow(opt: &Option<Cow<'static, [u8]>>) -> proc_macro2::TokenStream {
+fn quote_option_cow(opt: &Option<Cow<'static, minicdn_core::Bytes>>) -> proc_macro2::TokenStream {
     if let Some(data) = opt {
         let cow = quote_cow(data);
         quote! {

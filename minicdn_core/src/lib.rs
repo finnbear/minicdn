@@ -34,14 +34,14 @@ impl Default for MiniCdn {
 }
 
 #[cfg(not(feature = "serde_base64"))]
-type Bytes = [u8];
+pub type Bytes = [u8];
 #[cfg(feature = "serde_base64")]
-type Bytes = base64::Bytes;
+pub type Bytes = base64::Bytes;
 
 #[cfg(not(feature = "serde_base64"))]
-type ByteBuf = Vec<u8>;
+pub type ByteBuf = Vec<u8>;
 #[cfg(feature = "serde_base64")]
-type ByteBuf = base64::ByteBuf;
+pub type ByteBuf = base64::ByteBuf;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

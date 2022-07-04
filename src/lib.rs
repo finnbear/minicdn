@@ -4,7 +4,9 @@ pub use minicdn_core::{EmbeddedMiniCdn, FilesystemMiniCdn, MiniCdn, MiniCdnFile}
 pub use minicdn_macros::{include_mini_cdn, release_include_mini_cdn};
 
 #[cfg(feature = "serde_base64")]
-pub use minicdn_core::base64::{convert_serde_base64_cow, ByteBuf, Bytes};
+pub use minicdn_core::base64::{convert_serde_base64_cow};
+#[cfg(feature = "serde_base64")]
+pub use minicdn_core::{Bytes, ByteBuf};
 
 #[cfg(test)]
 mod tests {
