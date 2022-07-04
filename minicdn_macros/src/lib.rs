@@ -47,10 +47,10 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
+    #[allow(unused)]
     EmbeddedMiniCdn::new_compressed(&root_path)
         .iter()
         .for_each(|(path, file)| {
-            let contents = quote_cow(&file.contents);
             #[allow(unused_mut)]
             let mut fields = Vec::<proc_macro2::TokenStream>::new();
 
@@ -102,10 +102,15 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
                 });
             }
 
+            let include_path_raw = Path::new(&root_path).join(&**path);
+            let include_path_canonical = include_path_raw.canonicalize().unwrap();
+            let include_path = include_path_canonical.to_str().unwrap();
+
+            // Must use include_str! instead of file.contents so a change triggers a recompilation.
             files.push(
                 quote! {
                     ret.insert(std::borrow::Cow::Borrowed(#path), minicdn::MiniCdnFile{
-                        contents: #contents,
+                        contents: std::borrow::Cow::Borrowed(minicdn::into_bytes(include_bytes!(#include_path))),
                         #(#fields,)*
                     });
                 }
