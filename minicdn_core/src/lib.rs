@@ -69,9 +69,13 @@ impl EmbeddedMiniCdn {
 
             let mime_essence = mime(&relative_path);
             let etag = etag(&contents);
-            let contents_brotli = brotli(&contents);
-            let contents_gzip = gzip(&contents);
             let contents_webp = webp(&contents, &mime_essence);
+            let (contents_brotli, contents_gzip) = if contents_webp.is_none() {
+                (brotli(&contents), gzip(&contents))
+            } else {
+                // Don't apply generic compression to images.
+                (None, None)
+            };
 
             ret.insert(
                 Cow::Owned(relative_path),
