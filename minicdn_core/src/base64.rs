@@ -9,8 +9,7 @@ pub struct Bytes([u8]);
 
 impl<'a> From<&'a Bytes> for &'a [u8] {
     fn from(val: &'a Bytes) -> Self {
-        // SAFETY: Same memory layout, as checked by [`RefCast`] in the other direction.
-        unsafe { &*(val as *const Bytes as *const [u8]) }
+        &val.0
     }
 }
 
