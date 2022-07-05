@@ -1,7 +1,7 @@
 [package]
 name = "minicdn"
 authors = ["Finn Bear"]
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -14,12 +14,11 @@ last_modified = ["minicdn_core/last_modified", "minicdn_macros/last_modified"]
 brotli = ["minicdn_core/brotli", "minicdn_macros/brotli"]
 gzip = ["minicdn_core/gzip", "minicdn_macros/gzip"]
 webp = ["minicdn_core/webp", "minicdn_core/image", "minicdn_macros/webp"]
-serde = ["minicdn_core/serde", "minicdn_macros/serde"]
-serde_base64 = ["minicdn_core/serde_base64", "minicdn_core/serde_base64"]
+serde = ["minicdn_core/use_serde", "minicdn_macros/serde"]
 
 [dependencies]
-minicdn_core = {version = "0.1.12", path = "./minicdn_core"}
-minicdn_macros = {version = "0.1.12", path = "./minicdn_macros"}
+minicdn_core = {version = "0.1.13", path = "./minicdn_core"}
+minicdn_macros = {version = "0.1.13", path = "./minicdn_macros"}
 
 [dev-dependencies]
 serde_json = "1.0"

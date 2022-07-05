@@ -1,11 +1,12 @@
 #![feature(proc_macro_span)]
 
+extern crate core;
+
 use litrs::StringLit;
 use minicdn_core::EmbeddedMiniCdn;
 use proc_macro::TokenStream;
 use proc_macro2::{Literal, TokenTree};
 use quote::{quote, ToTokens, TokenStreamExt};
-use std::borrow::Cow;
 use std::path::Path;
 
 #[proc_macro]
@@ -54,33 +55,36 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
             #[allow(unused_mut)]
             let mut fields = Vec::<proc_macro2::TokenStream>::new();
 
+            #[allow(unused)]
+            use std::ops::Deref;
+
             #[cfg(feature = "etag")]
             {
-                let etag = &file.etag;
+                let etag = file.etag.deref();
                 fields.push(quote! {
-                    etag: std::borrow::Cow::Borrowed(#etag)
+                    etag: #etag.into()
                 });
             }
 
             #[cfg(feature = "last_modified")]
             {
-                let last_modified = &file.last_modified;
+                let last_modified = file.last_modified.deref();
                 fields.push(quote! {
-                    last_modified: std::borrow::Cow::Borrowed(#last_modified)
+                    last_modified: #last_modified.into()
                 });
             }
 
             #[cfg(feature = "mime")]
             {
-                let mime = &file.mime;
+                let mime = file.mime.deref();
                 fields.push(quote! {
-                    mime: std::borrow::Cow::Borrowed(#mime)
+                    mime: #mime.into()
                 });
             }
 
             #[cfg(feature = "brotli")]
             {
-                let contents_brotli = quote_option_cow(&file.contents_brotli);
+                let contents_brotli = quote_option_bytes(&file.contents_brotli);
                 fields.push(quote! {
                     contents_brotli: #contents_brotli
                 });
@@ -88,7 +92,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
             #[cfg(feature = "gzip")]
             {
-                let contents_gzip = quote_option_cow(&file.contents_gzip);
+                let contents_gzip = quote_option_bytes(&file.contents_gzip);
                 fields.push(quote! {
                     contents_gzip: #contents_gzip
                 });
@@ -96,7 +100,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
             #[cfg(feature = "webp")]
             {
-                let contents_webp = quote_option_cow(&file.contents_webp);
+                let contents_webp = quote_option_bytes(&file.contents_webp);
                 fields.push(quote! {
                     contents_webp: #contents_webp
                 });
@@ -110,7 +114,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
             files.push(
                 quote! {
                     ret.insert(std::borrow::Cow::Borrowed(#path), minicdn::MiniCdnFile{
-                        contents: std::borrow::Cow::Borrowed(minicdn::into_bytes(include_bytes!(#include_path))),
+                        contents: minicdn::Base64Bytes::from_static(include_bytes!(#include_path)),
                         #(#fields,)*
                     });
                 }
@@ -158,20 +162,20 @@ impl<'a> ToTokens for ByteStr<'a> {
 }
 
 #[allow(unused)]
-fn quote_cow(data: &Cow<'static, minicdn_core::Bytes>) -> proc_macro2::TokenStream {
+fn quote_bytes(data: &minicdn_core::Base64Bytes) -> proc_macro2::TokenStream {
     let bytes = ByteStr(data.as_ref());
     quote! {
-        std::borrow::Cow::Borrowed(minicdn::into_bytes(#bytes))
+        minicdn::Base64Bytes::from_static(#bytes)
     }
     .into()
 }
 
 #[allow(unused)]
-fn quote_option_cow(opt: &Option<Cow<'static, minicdn_core::Bytes>>) -> proc_macro2::TokenStream {
+fn quote_option_bytes(opt: &Option<minicdn_core::Base64Bytes>) -> proc_macro2::TokenStream {
     if let Some(data) = opt {
-        let cow = quote_cow(data);
+        let bytes = quote_bytes(data);
         quote! {
-            Some(#cow)
+            Some(#bytes)
         }
     } else {
         quote! {

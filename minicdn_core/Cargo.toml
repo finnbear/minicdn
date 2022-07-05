@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_core"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -11,7 +11,7 @@ etag = ["sha256"]
 last_modified = []
 mime = ["mime_guess"]
 gzip = ["flate2"]
-serde_base64 = ["serde", "base64", "ref-cast"]
+use_serde = ["serde", "bytes/serde"]
 
 [dependencies]
 mime_guess = {version = "2.0", optional = true}
@@ -21,6 +21,8 @@ flate2 = {version = "1", optional = true}
 brotli = {version = "3.3", optional = true}
 webp = {version = "0.2", optional = true}
 image = {version = "0.24", features = ["png", "jpeg"], default-features = false, optional = true}
-serde = {version = "1.0", features = ["derive"], optional = true}
-base64 = {version = "0.13", optional = true}
-ref-cast = {version = "1.0.7", optional = true}
+serde = {version = "1.0", features = ["derive", "rc"], optional = true}
+bytes = "1"
+bytestring = {version = "1.1.0", features = ["serde"]}
+base64 = "0.13"
+ref-cast = "1.0.7"

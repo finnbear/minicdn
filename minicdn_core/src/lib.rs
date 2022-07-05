@@ -1,9 +1,9 @@
+mod bytes;
+
+pub use crate::bytes::Base64Bytes;
 use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::path::Path;
-
-#[cfg(feature = "serde_base64")]
-pub mod base64;
 
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
 #[derive(Clone, Debug)]
@@ -33,39 +33,29 @@ impl Default for MiniCdn {
     }
 }
 
-#[cfg(not(feature = "serde_base64"))]
-pub type Bytes = [u8];
-#[cfg(feature = "serde_base64")]
-pub type Bytes = base64::Bytes;
-
-#[cfg(not(feature = "serde_base64"))]
-pub type ByteBuf = Vec<u8>;
-#[cfg(feature = "serde_base64")]
-pub type ByteBuf = base64::ByteBuf;
-
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MiniCdnFile {
     /// For ETAG-based caching.
     #[cfg(feature = "etag")]
-    pub etag: Cow<'static, str>,
+    pub etag: bytestring::ByteString,
     /// For last modified caching.
     #[cfg(feature = "last_modified")]
-    pub last_modified: Cow<'static, str>,
+    pub last_modified: bytestring::ByteString,
     /// MIME type.
     #[cfg(feature = "mime")]
-    pub mime: Cow<'static, str>,
+    pub mime: bytestring::ByteString,
     /// Raw bytes of file.
-    pub contents: Cow<'static, Bytes>,
+    pub contents: Base64Bytes,
     /// Contents compressed as Brotli.
     #[cfg(feature = "gzip")]
-    pub contents_brotli: Option<Cow<'static, Bytes>>,
+    pub contents_brotli: Option<Base64Bytes>,
     /// Contents compressed as GZIP.
     #[cfg(feature = "brotli")]
-    pub contents_gzip: Option<Cow<'static, Bytes>>,
+    pub contents_gzip: Option<Base64Bytes>,
     /// Contents compressed as WebP (only applies to images).
     #[cfg(feature = "webp")]
-    pub contents_webp: Option<Cow<'static, Bytes>>,
+    pub contents_webp: Option<Base64Bytes>,
 }
 
 impl EmbeddedMiniCdn {
@@ -87,11 +77,11 @@ impl EmbeddedMiniCdn {
             let contents = std::fs::read(&absolute_path).expect(&relative_path);
 
             #[cfg(feature = "mime")]
-            let mime_essence = mime(&relative_path);
+            let mime = mime(&relative_path);
             #[cfg(feature = "etag")]
             let etag = etag(&contents);
             #[cfg(feature = "webp")]
-            let contents_webp = webp(&contents, &mime_essence);
+            let contents_webp = webp(&contents, &mime);
 
             #[cfg(not(feature = "webp"))]
             #[allow(unused)]
@@ -111,18 +101,18 @@ impl EmbeddedMiniCdn {
                 Cow::Owned(relative_path),
                 MiniCdnFile {
                     #[cfg(feature = "etag")]
-                    etag: Cow::Owned(etag),
+                    etag: etag.into(),
                     #[cfg(feature = "last_modified")]
-                    last_modified: Cow::Owned(last_modified),
+                    last_modified: last_modified.into(),
                     #[cfg(feature = "mime")]
-                    mime: Cow::Owned(mime_essence),
-                    contents: Cow::Owned(into_byte_buf(contents)),
+                    mime: mime.into(),
+                    contents: contents.into(),
                     #[cfg(feature = "brotli")]
-                    contents_brotli: contents_brotli.map(into_byte_buf).map(Cow::Owned),
+                    contents_brotli: contents_brotli.map(Into::into),
                     #[cfg(feature = "gzip")]
-                    contents_gzip: contents_gzip.map(into_byte_buf).map(Cow::Owned),
+                    contents_gzip: contents_gzip.map(Into::into),
                     #[cfg(feature = "webp")]
-                    contents_webp: contents_webp.map(into_byte_buf).map(Cow::Owned),
+                    contents_webp: contents_webp.map(Into::into),
                 },
             )
         });
@@ -172,12 +162,12 @@ impl FilesystemMiniCdn {
         let contents = std::fs::read(&canonical_path).ok()?;
         Some(MiniCdnFile {
             #[cfg(feature = "mime")]
-            mime: Cow::Owned(mime(canonical_path)),
+            mime: mime(canonical_path).into(),
             #[cfg(feature = "etag")]
-            etag: Cow::Owned(etag(&contents)),
+            etag: etag(&contents).into(),
             #[cfg(feature = "last_modified")]
-            last_modified: Cow::Owned(last_modified(canonical_path)),
-            contents: Cow::Owned(into_byte_buf(contents)),
+            last_modified: last_modified(canonical_path).into(),
+            contents: contents.into(),
             #[cfg(feature = "brotli")]
             contents_brotli: None,
             #[cfg(feature = "gzip")]
@@ -253,23 +243,6 @@ impl From<&FilesystemMiniCdn> for EmbeddedMiniCdn {
         }
         ret
     }
-}
-
-/// Nothing to see here, move along now!
-pub fn into_bytes<'a>(bytes: &'a [u8]) -> &'a Bytes {
-    #[cfg(feature = "serde_base64")]
-    return bytes.into();
-
-    #[cfg(not(feature = "serde_base64"))]
-    bytes
-}
-
-fn into_byte_buf(vec: Vec<u8>) -> ByteBuf {
-    #[cfg(feature = "serde_base64")]
-    return ByteBuf::from(vec);
-
-    #[cfg(not(feature = "serde_base64"))]
-    vec
 }
 
 fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
@@ -360,7 +333,7 @@ fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(contents.as_ref()).unwrap();
     let vec = encoder.finish().unwrap();
-    if vec.len() * 10 / 9 < contents.as_ref().len() {
+    if vec.len() * 10 / 9 < contents.len() {
         Some(vec)
     } else {
         // Compression is counterproductive.
@@ -371,7 +344,7 @@ fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
 #[cfg(feature = "webp")]
 fn webp(contents: &[u8], mime_essence: &str) -> Option<Vec<u8>> {
     use std::io::Cursor;
-    let cursor = Cursor::new(contents.as_ref());
+    let cursor = Cursor::new(contents);
     let mut reader = image::io::Reader::new(cursor);
     use image::ImageFormat;
     reader.set_format(match mime_essence {
@@ -387,7 +360,8 @@ fn webp(contents: &[u8], mime_essence: &str) -> Option<Vec<u8>> {
 
             if webp_image.len() * 10 / 9 < contents.len() {
                 // Compression is counterproductive.
-                Some(webp_image.as_ref().to_vec())
+                use std::ops::Deref;
+                Some(webp_image.deref().to_vec())
             } else {
                 None
             }
