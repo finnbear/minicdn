@@ -160,13 +160,10 @@ fn arg_to_path(arg: &str) -> String {
         // Get rid of the source file name.
         root_path.pop();
         root_path.push(Path::new(arg));
-        #[allow(unused_mut)]
-        let mut ret = root_path.to_str().unwrap().to_string();
-        if let Some(src_idx) = ret.find("/src/") {
-            // Workaround for workspaces, which mess with the path.
-            ret = String::from(&ret[src_idx + 1..]);
-        }
-        ret
+        // Relative paths cause problems when Rust arbitrarily manipulates the working directory
+        // e.g. when workspaces are used.
+        let canonical = root_path.canonicalize().unwrap();
+        canonical.to_str().unwrap().to_string()
     }
 }
 
