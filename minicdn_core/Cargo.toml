@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_core"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -25,4 +25,3 @@ serde = {version = "1.0", features = ["derive", "rc"], optional = true}
 bytes = "1"
 bytestring = {version = "1.1.0", features = ["serde"]}
 base64 = "0.13"
-ref-cast = "1.0.7"

@@ -1,4 +1,5 @@
 #![feature(proc_macro_span)]
+#![feature(track_path)]
 
 extern crate core;
 
@@ -48,10 +49,14 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
+    proc_macro::tracked_path::path(&root_path);
+
     #[allow(unused)]
     EmbeddedMiniCdn::new_compressed(&root_path)
         .iter()
         .for_each(|(path, file)| {
+            proc_macro::tracked_path::path(path);
+
             #[allow(unused_mut)]
             let mut fields = Vec::<proc_macro2::TokenStream>::new();
 
@@ -146,10 +151,23 @@ fn parse_arg(args: TokenStream) -> String {
 }
 
 fn arg_to_path(arg: &str) -> String {
-    let mut root_path = proc_macro::Span::call_site().source_file().path();
-    root_path.pop();
-    root_path.push(Path::new(arg));
-    root_path.to_str().unwrap().to_string()
+    if Path::new(arg).is_absolute() {
+        // Absolute path.
+        String::from(arg)
+    } else {
+        // Relative path.
+        let mut root_path = proc_macro::Span::call_site().source_file().path();
+        // Get rid of the source file name.
+        root_path.pop();
+        root_path.push(Path::new(arg));
+        #[allow(unused_mut)]
+        let mut ret = root_path.to_str().unwrap().to_string();
+        if let Some(src_idx) = ret.find("/src/") {
+            // Workaround for workspaces, which mess with the path.
+            ret = String::from(&ret[src_idx + 1..]);
+        }
+        ret
+    }
 }
 
 #[derive(Debug)]
