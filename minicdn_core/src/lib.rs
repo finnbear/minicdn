@@ -256,9 +256,9 @@ fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
             let relative_path = e
                 .path()
                 .strip_prefix(&root_path)
-                .unwrap()
+                .expect("failed to strip relative path prefix")
                 .to_str()
-                .expect("relative path error");
+                .expect("failed to stringify relative path");
             let absolute_path_raw =
                 std::fs::canonicalize(e.path()).expect("absolute path raw error");
             let absolute_path = absolute_path_raw.to_str().expect("absolute path error");
@@ -296,7 +296,7 @@ fn last_modified(absolute_path: &str) -> String {
         .unwrap_or(
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
+                .expect("unix time overflow")
                 .as_secs(),
         )
         .to_string()

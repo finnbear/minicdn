@@ -112,8 +112,14 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
             }
 
             let include_path_raw = Path::new(&root_path).join(&**path);
-            let include_path_canonical = include_path_raw.canonicalize().unwrap();
-            let include_path = include_path_canonical.to_str().unwrap();
+            let include_path_canonical = include_path_raw.canonicalize().expect(&format!(
+                "failed to canonicalize include path {:?}",
+                include_path_raw
+            ));
+            let include_path = include_path_canonical.to_str().expect(&format!(
+                "failed to stringify include path: {:?}",
+                include_path_canonical
+            ));
 
             // Must use include_str! instead of file.contents so a change triggers a recompilation.
             files.push(
@@ -162,8 +168,16 @@ fn arg_to_path(arg: &str) -> String {
         root_path.push(Path::new(arg));
         // Relative paths cause problems when Rust arbitrarily manipulates the working directory
         // e.g. when workspaces are used.
-        let canonical = root_path.canonicalize().unwrap();
-        canonical.to_str().unwrap().to_string()
+        let canonical = root_path
+            .canonicalize()
+            .expect(&format!("failed to canonicalize path {:?}", root_path));
+        canonical
+            .to_str()
+            .expect(&format!(
+                "failed to stringify canonical path {:?} (root path is {:?})",
+                canonical, root_path
+            ))
+            .to_string()
     }
 }
 
