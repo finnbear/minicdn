@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_macros"
-version = "0.1.16"
+version = "0.1.17"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -17,6 +17,7 @@ mime = ["minicdn_core/mime"]
 brotli = ["minicdn_core/brotli"]
 gzip = ["minicdn_core/gzip"]
 webp = ["minicdn_core/webp", "minicdn_core/image"]
+config = ["minicdn_core/config"]
 
 [dependencies]
 minicdn_core = {version = "0.1.16", path = "../minicdn_core"}

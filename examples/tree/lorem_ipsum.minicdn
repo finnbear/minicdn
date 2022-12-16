@@ -1,0 +1,3 @@
+brotli_buffer_size = 456
+brotli_level = 11
+brotli_large_window_size = 18

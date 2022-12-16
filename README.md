@@ -39,6 +39,22 @@ All of the fields (excepts `contents`) are disabled by default, but can be switc
 
 Check the documentation for other options, such as doing the compression at runtime.
 
+## Config file
+
+There is experimental support for customizing compression using a config file. If you had an image named `some_image.png`,
+you could place the following in a new file named `some_image.minicdn` adjust the WebP quality level.
+
+```toml
+webp_quality = 75.0
+```
+
+The following options are available:
+- `brotli_level` (1-11, default 9)
+- `brotli_buffer_size` (bytes, default 4096)
+- `brotli_large_window_size` (default 20)
+- `gzip_level` (1-9, default 9)
+- `webp_quality` (0-100 or "lossless", default 90)
+
 ## License
 
 Licensed under either of

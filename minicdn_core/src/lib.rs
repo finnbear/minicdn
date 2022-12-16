@@ -3,7 +3,13 @@ mod bytes;
 pub use crate::bytes::Base64Bytes;
 use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::path::Path;
+use walkdir::DirEntry;
+
+/// File names with this suffix will be treated as config files
+#[cfg(feature = "config")]
+pub const CONFIG_SUFFIX: &str = ".minicdn";
 
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
 #[derive(Clone, Debug)]
@@ -48,10 +54,10 @@ pub struct MiniCdnFile {
     /// Raw bytes of file.
     pub contents: Base64Bytes,
     /// Contents compressed as Brotli.
-    #[cfg(feature = "gzip")]
+    #[cfg(feature = "brotli")]
     pub contents_brotli: Option<Base64Bytes>,
     /// Contents compressed as GZIP.
-    #[cfg(feature = "brotli")]
+    #[cfg(feature = "gzip")]
     pub contents_gzip: Option<Base64Bytes>,
     /// Contents compressed as WebP (only applies to images).
     #[cfg(feature = "webp")]
@@ -71,17 +77,159 @@ impl EmbeddedMiniCdn {
     /// runtime. This may incur significant runtime latency.
     pub fn new_compressed(root_path: &str) -> Self {
         let mut ret = Self::default();
+
+        #[cfg(feature = "brotli")]
+        fn default_brotli_level() -> u8 {
+            9
+        }
+
+        #[cfg(feature = "brotli")]
+        fn default_brotli_buffer_size() -> usize {
+            4096
+        }
+
+        #[cfg(feature = "brotli")]
+        fn default_brotli_large_window_size() -> u8 {
+            20
+        }
+
+        #[cfg(feature = "gzip")]
+        fn default_gzip_level() -> u8 {
+            8
+        }
+
+        #[cfg(feature = "webp")]
+        fn default_webp_quality() -> Option<f32> {
+            Some(90.0)
+        }
+
+        #[cfg_attr(feature = "config", derive(serde::Deserialize))]
+        struct Config {
+            #[cfg(feature = "brotli")]
+            #[cfg_attr(feature = "config", serde(default = "default_brotli_level"))]
+            brotli_level: u8,
+            #[cfg(feature = "brotli")]
+            #[cfg_attr(feature = "config", serde(default = "default_brotli_buffer_size"))]
+            brotli_buffer_size: usize,
+            #[cfg(feature = "brotli")]
+            #[cfg_attr(
+                feature = "config",
+                serde(default = "default_brotli_large_window_size")
+            )]
+            brotli_large_window_size: u8,
+            #[cfg(feature = "gzip")]
+            #[cfg_attr(feature = "config", serde(default = "default_gzip_level"))]
+            gzip_level: u8,
+            #[cfg(feature = "webp")]
+            #[cfg_attr(
+                feature = "config",
+                serde(
+                    default = "default_webp_quality",
+                    deserialize_with = "deserialize_webp_quality"
+                )
+            )]
+            webp_quality: Option<f32>,
+        }
+
+        #[cfg(all(feature = "webp", feature = "config"))]
+        fn deserialize_webp_quality<'de, D: serde::de::Deserializer<'de>>(
+            deserializer: D,
+        ) -> Result<Option<f32>, D::Error> {
+            struct QualityOrLossless;
+
+            impl<'de> serde::de::Visitor<'de> for QualityOrLossless {
+                type Value = Option<f32>;
+
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("f32 quality or string \"lossless\"")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    if value == "lossless" {
+                        Ok(None)
+                    } else {
+                        Err(E::invalid_value(
+                            serde::de::Unexpected::Str(value),
+                            &"the string \"lossless\"",
+                        ))
+                    }
+                }
+
+                fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    if (0f64..=100f64).contains(&v) {
+                        Ok(Some(v as f32))
+                    } else {
+                        Err(E::invalid_value(
+                            serde::de::Unexpected::Float(v),
+                            &"a quality between 0 and 100",
+                        ))
+                    }
+                }
+            }
+
+            deserializer.deserialize_any(QualityOrLossless)
+        }
+
+        impl Default for Config {
+            fn default() -> Self {
+                Self {
+                    #[cfg(feature = "brotli")]
+                    brotli_level: default_brotli_level(),
+                    #[cfg(feature = "brotli")]
+                    brotli_buffer_size: default_brotli_buffer_size(),
+                    #[cfg(feature = "brotli")]
+                    brotli_large_window_size: default_brotli_large_window_size(),
+                    #[cfg(feature = "gzip")]
+                    gzip_level: default_gzip_level(),
+                    #[cfg(feature = "webp")]
+                    webp_quality: default_webp_quality(),
+                }
+            }
+        }
+
+        #[cfg(feature = "config")]
+        let mut configs = HashMap::<String, Config>::new();
+
         get_paths(root_path).for_each(|(absolute_path, relative_path)| {
-            #[cfg(feature = "last_modified")]
-            let last_modified = last_modified(&absolute_path);
             let contents = std::fs::read(&absolute_path).expect(&relative_path);
 
-            #[cfg(feature = "mime")]
+            #[cfg(feature = "config")]
+            if let Some(name) = relative_path.strip_suffix(CONFIG_SUFFIX) {
+                let config: Config = toml::from_slice(&contents).expect(&relative_path);
+                configs.insert(name.to_owned(), config);
+                return;
+            }
+
+            #[cfg(feature = "last_modified")]
+            let last_modified = last_modified(&absolute_path);
+            #[cfg(any(feature = "mime", feature = "webp"))]
             let mime = mime(&relative_path);
             #[cfg(feature = "etag")]
             let etag = etag(&contents);
+
+            #[cfg(feature = "config")]
+            #[allow(unused)]
+            let config = configs
+                .remove({
+                    if let Some((before, after)) = relative_path.split_once('.') {
+                        before
+                    } else {
+                        &relative_path
+                    }
+                })
+                .unwrap_or_default();
+            #[cfg(not(feature = "config"))]
+            #[allow(unused)]
+            let config = Config::default();
+
             #[cfg(feature = "webp")]
-            let contents_webp = webp(&contents, &mime);
+            let contents_webp = webp(&contents, &mime, config.webp_quality);
 
             #[cfg(not(feature = "webp"))]
             #[allow(unused)]
@@ -92,10 +240,23 @@ impl EmbeddedMiniCdn {
             let special = contents_webp.is_some();
 
             #[cfg(feature = "gzip")]
-            let contents_gzip = if special { None } else { gzip(&contents) };
+            let contents_gzip = if special {
+                None
+            } else {
+                gzip(&contents, config.gzip_level)
+            };
 
             #[cfg(feature = "brotli")]
-            let contents_brotli = if special { None } else { brotli(&contents) };
+            let contents_brotli = if special {
+                None
+            } else {
+                brotli(
+                    &contents,
+                    config.brotli_buffer_size,
+                    config.brotli_level,
+                    config.brotli_large_window_size,
+                )
+            };
 
             ret.insert(
                 Cow::Owned(relative_path),
@@ -114,8 +275,16 @@ impl EmbeddedMiniCdn {
                     #[cfg(feature = "webp")]
                     contents_webp: contents_webp.map(Into::into),
                 },
-            )
+            );
         });
+
+        #[cfg(feature = "config")]
+        assert!(
+            configs.is_empty(),
+            "unused minicdn config files: {:?}",
+            configs.keys().collect::<Vec<_>>()
+        );
+
         ret
     }
 
@@ -149,6 +318,13 @@ impl FilesystemMiniCdn {
 
     /// Loads a file from the corresponding directory.
     pub fn get(&self, path: &str) -> Option<MiniCdnFile> {
+        #[cfg(feature = "config")]
+        if path.ends_with(CONFIG_SUFFIX) {
+            // Though we don't expect to be asked for the config file,
+            // make sure we never return it.
+            return None;
+        }
+
         let canonical_path_tmp = Path::new(self.root_path.as_ref())
             .join(path)
             .canonicalize()
@@ -248,7 +424,34 @@ impl From<&FilesystemMiniCdn> for EmbeddedMiniCdn {
 fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
     walkdir::WalkDir::new(&root_path)
         .follow_links(true)
-        .sort_by_file_name()
+        .sort_by(|a, b| {
+            #[derive(Ord, PartialOrd, Eq, PartialEq)]
+            struct Priority<'a> {
+                #[cfg(feature = "config")]
+                real: bool,
+                file_name: &'a OsStr,
+            }
+
+            fn prioritize(e: &DirEntry) -> Priority<'_> {
+                #[cfg(feature = "config")]
+                let mut real = true;
+
+                #[cfg(feature = "config")]
+                if let Some(string) = e.file_name().to_str() {
+                    if string.ends_with(CONFIG_SUFFIX) {
+                        real = false;
+                    }
+                }
+
+                Priority {
+                    #[cfg(feature = "config")]
+                    real,
+                    file_name: e.file_name(),
+                }
+            }
+
+            prioritize(a).cmp(&prioritize(b))
+        })
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
@@ -273,7 +476,7 @@ fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
         })
 }
 
-#[cfg(feature = "mime")]
+#[cfg(any(feature = "mime", feature = "webp"))]
 fn mime(path: &str) -> String {
     mime_guess::from_path(&path)
         .first_or_octet_stream()
@@ -311,10 +514,11 @@ fn etag(contents: &[u8]) -> String {
 }
 
 #[cfg(feature = "brotli")]
-fn brotli(contents: &[u8]) -> Option<Vec<u8>> {
+fn brotli(contents: &[u8], buffer_size: usize, quality: u8, lgwin: u8) -> Option<Vec<u8>> {
     use std::io::Write;
     let mut output = Vec::new();
-    let mut writer = brotli::CompressorWriter::new(&mut output, 4096, 9, 20);
+    let mut writer =
+        brotli::CompressorWriter::new(&mut output, buffer_size, quality as u32, lgwin as u32);
     writer.write_all(contents).unwrap();
     drop(writer);
     if output.len() * 10 / 9 < contents.len() {
@@ -326,11 +530,11 @@ fn brotli(contents: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[cfg(feature = "gzip")]
-fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
+fn gzip(contents: &[u8], level: u8) -> Option<Vec<u8>> {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::new(level as u32));
     encoder.write_all(contents.as_ref()).unwrap();
     let vec = encoder.finish().unwrap();
     if vec.len() * 10 / 9 < contents.len() {
@@ -342,7 +546,7 @@ fn gzip(contents: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[cfg(feature = "webp")]
-fn webp(contents: &[u8], mime_essence: &str) -> Option<Vec<u8>> {
+fn webp(contents: &[u8], mime_essence: &str, quality: Option<f32>) -> Option<Vec<u8>> {
     use std::io::Cursor;
     let cursor = Cursor::new(contents);
     let mut reader = image::io::Reader::new(cursor);
@@ -354,9 +558,13 @@ fn webp(contents: &[u8], mime_essence: &str) -> Option<Vec<u8>> {
     });
     match reader.decode() {
         Ok(image) => {
-            let webp_image =
-                webp::Encoder::from_rgba(image.as_bytes(), image.width(), image.height())
-                    .encode(90.0);
+            let encoder = webp::Encoder::from_rgba(image.as_bytes(), image.width(), image.height());
+
+            let webp_image = if let Some(quality) = quality {
+                encoder.encode(quality)
+            } else {
+                encoder.encode_lossless()
+            };
 
             if webp_image.len() * 10 / 9 < contents.len() {
                 // Compression is counterproductive.
