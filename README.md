@@ -42,7 +42,7 @@ Check the documentation for other options, such as doing the compression at runt
 ## Config file
 
 There is experimental support for customizing compression using a config file. If you had an image named `some_image.png`,
-you could place the following in a new file named `some_image.minicdn` adjust the WebP quality level.
+you could place the following in a new file named `some_image.minicdn` to adjust the WebP quality level.
 
 ```toml
 webp_quality = 75.0
