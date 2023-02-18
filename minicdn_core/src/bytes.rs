@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "use_serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::ops::Deref;
@@ -45,7 +45,7 @@ impl fmt::Debug for Base64Bytes {
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "use_serde")]
 impl Serialize for Base64Bytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -60,7 +60,7 @@ impl Serialize for Base64Bytes {
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "use_serde")]
 impl<'de> Deserialize<'de> for Base64Bytes {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

@@ -13,7 +13,7 @@ pub const CONFIG_SUFFIX: &str = ".minicdn";
 
 /// A collection of files, either loaded from the compiled binary or the filesystem at runtime.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MiniCdn {
     Embedded(EmbeddedMiniCdn),
     Filesystem(FilesystemMiniCdn),
@@ -21,14 +21,14 @@ pub enum MiniCdn {
 
 /// A collection of files loaded from the compiled binary.
 #[derive(Clone, Debug, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EmbeddedMiniCdn {
     files: HashMap<Cow<'static, str>, MiniCdnFile>,
 }
 
 /// A collection of files loaded from the filesystem at runtime.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FilesystemMiniCdn {
     root_path: Cow<'static, str>,
 }
@@ -40,7 +40,7 @@ impl Default for MiniCdn {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MiniCdnFile {
     /// For ETAG-based caching.
     #[cfg(feature = "etag")]
@@ -141,7 +141,7 @@ impl EmbeddedMiniCdn {
                 type Value = Option<f32>;
 
                 fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                    formatter.write_str("f32 quality or string \"lossless\"")
+                    formatter.write_str("numerical quality or string \"lossless\"")
                 }
 
                 fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -170,6 +170,10 @@ impl EmbeddedMiniCdn {
                             &"a quality between 0 and 100",
                         ))
                     }
+                }
+
+                fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> {
+                    self.visit_f64(v as f64)
                 }
             }
 
