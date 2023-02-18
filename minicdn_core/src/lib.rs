@@ -172,7 +172,17 @@ impl EmbeddedMiniCdn {
                     }
                 }
 
-                fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> {
+                fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    self.visit_f64(v as f64)
+                }
+
+                fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
                     self.visit_f64(v as f64)
                 }
             }
