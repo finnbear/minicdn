@@ -1,9 +1,14 @@
 #[doc(hidden)]
 pub use minicdn_core::Base64Bytes;
-pub use minicdn_core::{EmbeddedMiniCdn, FilesystemMiniCdn, MiniCdn, MiniCdnFile};
-pub use minicdn_macros::{include_mini_cdn, release_include_mini_cdn};
+#[cfg(feature = "walkdir")]
+pub use minicdn_core::FilesystemMiniCdn;
+pub use minicdn_core::{EmbeddedMiniCdn, MiniCdn, MiniCdnFile};
+pub use minicdn_macros::include_mini_cdn;
+#[cfg(feature = "walkdir")]
+pub use minicdn_macros::release_include_mini_cdn;
 
 #[cfg(test)]
+#[cfg(feature = "walkdir")]
 mod tests {
     use minicdn_core::MiniCdn;
     use std::borrow::Cow;

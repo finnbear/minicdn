@@ -49,6 +49,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
+    #[cfg(feature = "track_dir")]
     proc_macro::tracked_path::path(&root_path);
 
     #[allow(unused)]

@@ -1,15 +1,17 @@
 [package]
 name = "minicdn_core"
-version = "0.1.20"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
 description = "Static files, compressed for efficiency (core crate)."
 
 [features]
-etag = ["sha256"]
+bytes = ["dep:bytes"]
+bytestring = ["dep:bytestring", "bytes"]
+etag = ["sha256", "bytestring"]
 last_modified = []
-mime = ["mime_guess"]
+mime = ["mime_guess", "bytestring"]
 gzip = ["flate2"]
 use_serde = ["serde", "bytes/serde"]
 webp = ["dep:webp", "mime_guess"]
@@ -18,7 +20,7 @@ config = ["toml", "serde"]
 [dependencies]
 mime_guess = { version = "2.0", optional = true }
 sha256 = { version = "1.0", optional = true }
-walkdir = "2.3"
+walkdir = { version = "2.3", optional = true }
 flate2 = { version = "1", optional = true }
 brotli = { version = "3.3", optional = true }
 webp = { version = "0.2", optional = true }
@@ -28,6 +30,6 @@ image = { version = "0.24", features = [
 ], default-features = false, optional = true }
 serde = { version = "1.0", features = ["derive", "rc"], optional = true }
 toml = { version = "0.5", optional = true }
-bytes = "1"
-bytestring = { version = "1.1.0", features = ["serde"] }
+bytes = { version = "1", optional = true }
+bytestring = { version = "1.1.0", features = ["serde"], optional = true }
 base64 = "0.13"

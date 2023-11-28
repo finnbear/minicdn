@@ -1,11 +1,8 @@
 mod bytes;
 
 pub use crate::bytes::Base64Bytes;
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::path::Path;
-use walkdir::DirEntry;
 
 /// File names with this suffix will be treated as config files
 #[cfg(feature = "config")]
@@ -16,6 +13,7 @@ pub const CONFIG_SUFFIX: &str = ".minicdn";
 #[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MiniCdn {
     Embedded(EmbeddedMiniCdn),
+    #[cfg(feature = "walkdir")]
     Filesystem(FilesystemMiniCdn),
 }
 
@@ -29,6 +27,7 @@ pub struct EmbeddedMiniCdn {
 /// A collection of files loaded from the filesystem at runtime.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "use_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg(feature = "walkdir")]
 pub struct FilesystemMiniCdn {
     root_path: Cow<'static, str>,
 }
@@ -67,7 +66,9 @@ pub struct MiniCdnFile {
 impl EmbeddedMiniCdn {
     /// Embeds the files into the binary at runtime, without compressing. The path is evaluated
     /// at runtime.
+    #[cfg(feature = "walkdir")]
     pub fn new(root_path: &str) -> Self {
+        use std::borrow::Borrow;
         FilesystemMiniCdn::new(Cow::Owned(root_path.to_string()))
             .borrow()
             .into()
@@ -75,6 +76,7 @@ impl EmbeddedMiniCdn {
 
     /// Embeds the files into the binary at runtime. The path and compression are evaluated at
     /// runtime. This may incur significant runtime latency.
+    #[cfg(feature = "walkdir")]
     pub fn new_compressed(root_path: &str) -> Self {
         let mut ret = Self::default();
 
@@ -323,6 +325,7 @@ impl EmbeddedMiniCdn {
     }
 }
 
+#[cfg(feature = "walkdir")]
 impl FilesystemMiniCdn {
     /// References the files. Subsequent accesses will load from the file system relative to
     /// this path.
@@ -339,12 +342,14 @@ impl FilesystemMiniCdn {
             return None;
         }
 
-        let canonical_path_tmp = Path::new(self.root_path.as_ref())
+        let canonical_path_tmp = std::path::Path::new(self.root_path.as_ref())
             .join(path)
             .canonicalize()
             .ok()?;
         let canonical_path = canonical_path_tmp.to_str()?;
-        let canonical_root_path_tmp = Path::new(self.root_path.as_ref()).canonicalize().ok()?;
+        let canonical_root_path_tmp = std::path::Path::new(self.root_path.as_ref())
+            .canonicalize()
+            .ok()?;
         let canonical_root_path = canonical_root_path_tmp.to_str()?;
         if !canonical_path.starts_with(canonical_root_path) {
             return None;
@@ -379,18 +384,21 @@ impl FilesystemMiniCdn {
 impl MiniCdn {
     /// Embeds the files into the binary at runtime, without compressing. The path is evaluated
     /// at runtime.
+    #[cfg(feature = "walkdir")]
     pub fn new_embedded_from_path(root_path: &str) -> Self {
         Self::Embedded(EmbeddedMiniCdn::new(root_path))
     }
 
     /// Embeds the files into the binary at runtime. The path and compression are evaluated at
     /// runtime. This may incur significant runtime latency.
+    #[cfg(feature = "walkdir")]
     pub fn new_compressed_from_path(root_path: &str) -> Self {
         Self::Embedded(EmbeddedMiniCdn::new_compressed(root_path))
     }
 
     /// References the files. Subsequent accesses will load from the file system relative to
     /// this path.
+    #[cfg(feature = "walkdir")]
     pub fn new_filesystem_from_path(root_path: Cow<'static, str>) -> Self {
         Self::Filesystem(FilesystemMiniCdn::new(root_path))
     }
@@ -399,6 +407,7 @@ impl MiniCdn {
     pub fn get(&self, path: &str) -> Option<Cow<'_, MiniCdnFile>> {
         match self {
             Self::Embedded(embedded) => embedded.get(path).map(Cow::Borrowed),
+            #[cfg(feature = "walkdir")]
             Self::Filesystem(filesystem) => filesystem.get(path).map(Cow::Owned),
         }
     }
@@ -407,6 +416,7 @@ impl MiniCdn {
     pub fn insert(&mut self, path: Cow<'static, str>, file: MiniCdnFile) {
         match self {
             Self::Embedded(embedded) => embedded.insert(path, file),
+            #[cfg(feature = "walkdir")]
             Self::Filesystem(filesystem) => {
                 *self = Self::Embedded((&*filesystem).into());
                 self.insert(path, file);
@@ -418,6 +428,7 @@ impl MiniCdn {
     pub fn for_each(&self, mut f: impl FnMut(&str, &MiniCdnFile)) {
         match self {
             Self::Embedded(embedded) => embedded.iter().for_each(|(path, file)| f(&path, &file)),
+            #[cfg(feature = "walkdir")]
             Self::Filesystem(filesystem) => {
                 filesystem.iter().for_each(|(path, file)| f(&path, &file))
             }
@@ -425,6 +436,7 @@ impl MiniCdn {
     }
 }
 
+#[cfg(feature = "walkdir")]
 impl From<&FilesystemMiniCdn> for EmbeddedMiniCdn {
     fn from(filesystem: &FilesystemMiniCdn) -> Self {
         let mut ret = EmbeddedMiniCdn::default();
@@ -435,6 +447,7 @@ impl From<&FilesystemMiniCdn> for EmbeddedMiniCdn {
     }
 }
 
+#[cfg(feature = "walkdir")]
 fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
     walkdir::WalkDir::new(&root_path)
         .follow_links(true)
@@ -443,10 +456,10 @@ fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
             struct Priority<'a> {
                 #[cfg(feature = "config")]
                 real: bool,
-                file_name: &'a OsStr,
+                file_name: &'a std::ffi::OsStr,
             }
 
-            fn prioritize(e: &DirEntry) -> Priority<'_> {
+            fn prioritize(e: &walkdir::DirEntry) -> Priority<'_> {
                 #[cfg(feature = "config")]
                 let mut real = true;
 
@@ -490,7 +503,7 @@ fn get_paths(root_path: &str) -> impl Iterator<Item = (String, String)> + '_ {
         })
 }
 
-#[cfg(any(feature = "mime", feature = "webp"))]
+#[cfg(all(any(feature = "mime", feature = "webp"), feature = "walkdir"))]
 fn mime(path: &str) -> String {
     mime_guess::from_path(&path)
         .first_or_octet_stream()

@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_macros"
-version = "0.1.20"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -10,6 +10,7 @@ description = "Static files, compressed for efficiency (macros crate)."
 proc-macro = true
 
 [features]
+track_dir = []
 serde = ["minicdn_core/use_serde"]
 etag = ["minicdn_core/etag"]
 last_modified = ["minicdn_core/last_modified"]
@@ -20,7 +21,7 @@ webp = ["minicdn_core/webp", "minicdn_core/image"]
 config = ["minicdn_core/config"]
 
 [dependencies]
-minicdn_core = { version = "0.1.20", path = "../minicdn_core" }
+minicdn_core = { version = "0.2.0", path = "../minicdn_core", features = ["walkdir"] }
 syn = "1.0"
 quote = "1.0"
 proc-macro2 = "1.0"

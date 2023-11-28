@@ -6,11 +6,18 @@ use std::ops::Deref;
 /// Like [`bytes::Bytes`] but serializes as base64.
 #[derive(Clone, Default, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Base64Bytes(bytes::Bytes);
+pub struct Base64Bytes(
+    #[cfg(feature = "bytes")] bytes::Bytes,
+    #[cfg(not(feature = "bytes"))] Vec<u8>,
+);
 
 impl Base64Bytes {
     pub fn from_static(bytes: &'static [u8]) -> Self {
-        Self(bytes::Bytes::from_static(bytes))
+        #[cfg(feature = "bytes")]
+        return Self(bytes::Bytes::from_static(bytes));
+
+        #[cfg(not(feature = "bytes"))]
+        Self(bytes.to_owned())
     }
 }
 
@@ -21,6 +28,7 @@ impl Deref for Base64Bytes {
     }
 }
 
+#[cfg(feature = "bytes")]
 impl From<bytes::Bytes> for Base64Bytes {
     fn from(val: bytes::Bytes) -> Self {
         Self(val)
@@ -29,10 +37,14 @@ impl From<bytes::Bytes> for Base64Bytes {
 
 impl From<Vec<u8>> for Base64Bytes {
     fn from(val: Vec<u8>) -> Self {
-        Self(bytes::Bytes::from(val))
+        #[cfg(feature = "bytes")]
+        return Self(bytes::Bytes::from(val));
+        #[cfg(not(feature = "bytes"))]
+        Self(val)
     }
 }
 
+#[cfg(feature = "bytes")]
 impl From<Base64Bytes> for bytes::Bytes {
     fn from(val: Base64Bytes) -> Self {
         val.0
@@ -66,14 +78,18 @@ impl<'de> Deserialize<'de> for Base64Bytes {
     where
         D: Deserializer<'de>,
     {
+        #[cfg(feature = "bytes")]
+        type TO = bytes::Bytes;
+        #[cfg(not(feature = "bytes"))]
+        type TO = Vec<u8>;
         if deserializer.is_human_readable() {
             let encoded = <&str>::deserialize(deserializer)?;
             base64::decode(encoded)
                 .map_err(serde::de::Error::custom)
-                .map(Into::<bytes::Bytes>::into)
+                .map(Into::<TO>::into)
                 .map(Base64Bytes::from)
         } else {
-            <bytes::Bytes>::deserialize(deserializer).map(Base64Bytes::from)
+            <TO>::deserialize(deserializer).map(Base64Bytes::from)
         }
     }
 }
