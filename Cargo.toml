@@ -1,17 +1,17 @@
 [package]
 name = "minicdn"
 authors = ["Finn Bear"]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
 description = "Static files, compressed for efficiency."
 
 [features]
-default = ["bytes", "track_dir", "walkdir"]
+default = ["bytes", "track_path", "walkdir"]
 bytes = ["minicdn_core/bytes"]
 walkdir = ["minicdn_core/walkdir"]
-track_dir = ["minicdn_macros/track_dir"]
+track_path = ["minicdn_macros/track_path"]
 etag = ["minicdn_core/etag", "minicdn_macros/etag"]
 mime = ["minicdn_core/mime", "minicdn_macros/mime"]
 last_modified = ["minicdn_core/last_modified", "minicdn_macros/last_modified"]
@@ -23,7 +23,7 @@ config = ["minicdn_core/config", "minicdn_macros/config"]
 
 [dependencies]
 minicdn_core = { version = "0.2.0", path = "./minicdn_core" }
-minicdn_macros = { version = "0.2.0", path = "./minicdn_macros" }
+minicdn_macros = { version = "0.2.1", path = "./minicdn_macros" }
 
 [dev-dependencies]
 serde_json = "1.0"

@@ -1,5 +1,5 @@
 #![feature(proc_macro_span)]
-#![feature(track_path)]
+#![cfg_attr(feature = "track_path", feature(track_path))]
 
 extern crate core;
 
@@ -56,6 +56,7 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
     EmbeddedMiniCdn::new_compressed(&root_path)
         .iter()
         .for_each(|(path, file)| {
+            #[cfg(feature = "track_dir")]
             proc_macro::tracked_path::path(path);
 
             #[allow(unused_mut)]
