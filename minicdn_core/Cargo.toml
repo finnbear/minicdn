@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_core"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -14,7 +14,7 @@ last_modified = []
 mime = ["mime_guess", "bytestring"]
 gzip = ["flate2"]
 use_serde = ["serde", "bytes/serde"]
-webp = ["dep:webp", "mime_guess"]
+webp = ["dep:webp", "mime_guess", "image"]
 config = ["toml", "serde"]
 
 [dependencies]

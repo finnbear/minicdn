@@ -49,14 +49,14 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
 
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
-    #[cfg(feature = "track_dir")]
+    #[cfg(feature = "track_path")]
     proc_macro::tracked_path::path(&root_path);
 
     #[allow(unused)]
     EmbeddedMiniCdn::new_compressed(&root_path)
         .iter()
         .for_each(|(path, file)| {
-            #[cfg(feature = "track_dir")]
+            #[cfg(feature = "track_path")]
             proc_macro::tracked_path::path(path);
 
             #[allow(unused_mut)]

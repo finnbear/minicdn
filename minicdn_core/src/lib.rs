@@ -585,7 +585,7 @@ fn webp(contents: &[u8], mime_essence: &str, quality: Option<f32>) -> Option<Vec
     });
     match reader.decode() {
         Ok(image) => {
-            let encoder = webp::Encoder::from_rgba(image.as_bytes(), image.width(), image.height());
+            let encoder = webp::Encoder::from_image(&image).ok()?;
 
             let webp_image = if let Some(quality) = quality {
                 encoder.encode(quality)
