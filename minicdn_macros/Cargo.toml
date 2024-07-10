@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_macros"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -21,7 +21,7 @@ webp = ["minicdn_core/webp", "minicdn_core/image"]
 config = ["minicdn_core/config"]
 
 [dependencies]
-minicdn_core = { version = "0.2.3", path = "../minicdn_core", features = ["walkdir"] }
+minicdn_core = { version = "0.2.4", path = "../minicdn_core", features = ["walkdir"] }
 syn = "1.0"
 quote = "1.0"
 proc-macro2 = "1.0"

@@ -534,7 +534,7 @@ fn last_modified(absolute_path: &str) -> String {
 
 #[cfg(feature = "etag")]
 fn etag(contents: &[u8]) -> String {
-    let mut etag = sha256::digest_bytes(contents);
+    let mut etag = sha256::digest(contents);
     etag.truncate(32);
     //etag.shrink_to_fit();
     etag
