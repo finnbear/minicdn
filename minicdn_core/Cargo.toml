@@ -1,6 +1,6 @@
 [package]
 name = "minicdn_core"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/minicdn/"
@@ -24,7 +24,7 @@ walkdir = { version = "2.3", optional = true }
 flate2 = { version = "1", optional = true }
 brotli = { version = "3.3", optional = true }
 webp = { version = "0.2", optional = true }
-image = { version = "0.24", features = [
+image = { version = "0.25", features = [
     "png",
     "jpeg",
 ], default-features = false, optional = true }
