@@ -1,5 +1,5 @@
 #![feature(proc_macro_span)]
-#![cfg_attr(feature = "track_path", feature(track_path))]
+#![cfg_attr(feature = "track_path", feature(proc_macro_tracked_path))]
 
 extern crate core;
 
@@ -50,14 +50,14 @@ pub fn include_mini_cdn(args: TokenStream) -> TokenStream {
     let mut files = Vec::<proc_macro2::TokenStream>::new();
 
     #[cfg(feature = "track_path")]
-    proc_macro::tracked_path::path(&root_path);
+    proc_macro::tracked::path(&root_path);
 
     #[allow(unused)]
     EmbeddedMiniCdn::new_compressed(&root_path)
         .iter()
         .for_each(|(path, file)| {
             #[cfg(feature = "track_path")]
-            proc_macro::tracked_path::path(path);
+            proc_macro::tracked::path(&**path);
 
             #[allow(unused_mut)]
             let mut fields = Vec::<proc_macro2::TokenStream>::new();
@@ -164,7 +164,7 @@ fn arg_to_path(arg: &str) -> String {
         String::from(arg)
     } else {
         // Relative path.
-        let mut root_path = proc_macro::Span::call_site().source_file().path();
+        let mut root_path = proc_macro::Span::call_site().local_file().unwrap();
         // Get rid of the source file name.
         root_path.pop();
         root_path.push(Path::new(arg));

@@ -576,7 +576,7 @@ fn gzip(contents: &[u8], level: u8) -> Option<Vec<u8>> {
 fn webp(contents: &[u8], mime_essence: &str, quality: Option<f32>) -> Option<Vec<u8>> {
     use std::io::Cursor;
     let cursor = Cursor::new(contents);
-    let mut reader = image::io::Reader::new(cursor);
+    let mut reader = image::ImageReader::new(cursor);
     use image::ImageFormat;
     reader.set_format(match mime_essence {
         "image/png" => ImageFormat::Png,

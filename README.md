@@ -1,6 +1,6 @@
 # minicdn
 
-Static files, compressed for efficiency. Currently, requires Rust nightly.
+Static files, compressed for efficiency. Currently, requires Rust nightly (will work on `nightly-2026-03-01`).
 
 ## Example
 
